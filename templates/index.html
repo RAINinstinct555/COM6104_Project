@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM-TrafficBrain — Signal Control</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c10;
+    --surface: #0d1520;
+    --surface2: #111c2a;
+    --border: #1a3050;
+    --accent: #00d4ff;
+    --accent2: #0080ff;
+    --green: #00ff88;
+    --red: #ff3b3b;
+    --amber: #ffaa00;
+    --text: #c8e0f0;
+    --text-dim: #4a6a8a;
+    --glow: 0 0 20px rgba(0,212,255,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+    padding: 30px 0 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 30px;
+  }
+
+  header h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--accent);
+    text-shadow: var(--glow);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+
+  header p {
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.85rem;
+    margin-top: 6px;
+    letter-spacing: 2px;
+  }
+
+  .status-bar {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-top: 12px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+  }
+
+  .status-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-dim);
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  .status-dot.offline { background: var(--red); box-shadow: 0 0 8px var(--red); animation: none; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Main layout */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  /* Panel base */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .panel-header h3 {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  .panel-icon {
+    font-size: 1rem;
+    opacity: 0.7;
+  }
+
+  .panel-body { padding: 20px; }
+
+  /* Form elements */
+  .form-group { margin-bottom: 18px; }
+
+  label {
+    display: block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  input[type="text"], input[type="number"], select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.9rem;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  input[type="text"]:focus, input[type="number"]:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0,212,255,0.1);
+  }
+
+  select option { background: var(--surface); }
+
+  /* Direction toggle buttons */
+  .dir-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .dir-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dim);
+    font-family: 'Orbitron', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+
+  .dir-btn:hover { border-color: var(--accent2); color: var(--text); }
+  .dir-btn.active {
+    background: rgba(0,212,255,0.1);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 10px rgba(0,212,255,0.2);
+  }
+
+  /* Queue inputs */
+  .queue-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .queue-item label {
+    font-size: 0.65rem;
+    margin-bottom: 4px;
+  }
+
+  /* Accident section */
+  .accident-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .toggle-btn {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    padding: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .toggle-btn.active-no { border-color: var(--green); color: var(--green); background: rgba(0,255,136,0.08); }
+  .toggle-btn.active-yes { border-color: var(--red); color: var(--red); background: rgba(255,59,59,0.08); }
+
+  .accident-dir { display: none; }
+  .accident-dir.show { display: block; }
+
+  .acc-dir-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+
+  .acc-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dim);
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem;
+    padding: 8px 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+
+  .acc-btn:hover { border-color: var(--amber); color: var(--amber); }
+  .acc-btn.active { border-color: var(--red); color: var(--red); background: rgba(255,59,59,0.1); }
+
+  /* Submit button */
+  .btn-calc {
+    width: 100%;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    border: none;
+    border-radius: 4px;
+    color: #000;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    margin-top: 8px;
+  }
+
+  .btn-calc:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,128,255,0.4); }
+  .btn-calc:active { transform: translateY(0); }
+  .btn-calc:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .btn-restore {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--amber);
+    border-radius: 4px;
+    color: var(--amber);
+    font-family: 'Orbitron', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 2px;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+    display: none;
+  }
+
+  .btn-restore.show { display: block; }
+  .btn-restore:hover { background: rgba(255,170,0,0.1); }
+
+  /* Right panel */
+  .right-col { display: flex; flex-direction: column; gap: 24px; }
+
+  /* Intersection visualization */
+  .intersection-viz {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    min-height: 360px;
+  }
+
+  .intersection {
+    position: relative;
+    width: 300px;
+    height: 300px;
+  }
+
+  /* Roads */
+  .road-ns {
+    position: absolute;
+    left: 50%; top: 0;
+    transform: translateX(-50%);
+    width: 80px; height: 100%;
+    background: #1a2535;
+    border-left: 2px solid #2a3f5a;
+    border-right: 2px solid #2a3f5a;
+  }
+
+  .road-ew {
+    position: absolute;
+    top: 50%; left: 0;
+    transform: translateY(-50%);
+    width: 100%; height: 80px;
+    background: #1a2535;
+    border-top: 2px solid #2a3f5a;
+    border-bottom: 2px solid #2a3f5a;
+  }
+
+  /* Road markings */
+  .road-ns::before {
+    content: '';
+    position: absolute;
+    left: 50%; top: 0;
+    transform: translateX(-50%);
+    width: 3px; height: 100%;
+    background: repeating-linear-gradient(to bottom, #ffaa00 0, #ffaa00 15px, transparent 15px, transparent 30px);
+    opacity: 0.4;
+  }
+
+  .road-ew::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 0;
+    transform: translateY(-50%);
+    height: 3px; width: 100%;
+    background: repeating-linear-gradient(to right, #ffaa00 0, #ffaa00 15px, transparent 15px, transparent 30px);
+    opacity: 0.4;
+  }
+
+  /* Centre box */
+  .centre-box {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 80px; height: 80px;
+    background: #1a2535;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .centre-icon {
+    font-size: 1.4rem;
+    opacity: 0.3;
+  }
+
+  /* Traffic lights */
+  .tl-post {
+    position: absolute;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .tl-post.north { top: 20px; left: 50%; transform: translateX(-50%); }
+  .tl-post.south { bottom: 20px; left: 50%; transform: translateX(-50%); }
+  .tl-post.east  { right: 20px; top: 50%; transform: translateY(-50%); }
+  .tl-post.west  { left: 20px; top: 50%; transform: translateY(-50%); }
+
+  .tl-box {
+    background: #0a1520;
+    border: 1px solid #1a3050;
+    border-radius: 6px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    align-items: center;
+  }
+
+  .tl-post.east .tl-box,
+  .tl-post.west .tl-box {
+    flex-direction: row;
+  }
+
+  .bulb {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #111;
+    border: 1px solid #1a3050;
+    transition: all 0.4s ease;
+  }
+
+  .bulb.red-on    { background: var(--red);   box-shadow: 0 0 12px var(--red),   0 0 24px rgba(255,59,59,0.5); }
+  .bulb.amber-on  { background: var(--amber); box-shadow: 0 0 12px var(--amber), 0 0 24px rgba(255,170,0,0.5); }
+  .bulb.green-on  { background: var(--green); box-shadow: 0 0 12px var(--green), 0 0 24px rgba(0,255,136,0.5); }
+
+  .tl-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  /* Queue indicators around intersection */
+  .queue-indicator {
+    position: absolute;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .queue-indicator.north { top: -50px; left: 50%; transform: translateX(-50%); }
+  .queue-indicator.south { bottom: -50px; left: 50%; transform: translateX(-50%); }
+  .queue-indicator.east  { right: -60px; top: 50%; transform: translateY(-50%); }
+  .queue-indicator.west  { left: -60px; top: 50%; transform: translateY(-50%); }
+
+  .queue-count {
+    font-family: 'Orbitron', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--accent);
+    text-shadow: var(--glow);
+  }
+
+  .queue-dir-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  /* Results panel */
+  .results-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .result-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    transition: border-color 0.3s;
+  }
+
+  .result-card.active-card { border-color: var(--accent); }
+
+  .result-card-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+
+  .timing-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .timing-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .timing-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  .timing-dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .timing-dot.red   { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+
+  .timing-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.3rem;
+    font-weight: 700;
+  }
+
+  .timing-value.green-val { color: var(--green); }
+  .timing-value.red-val   { color: var(--red); }
+  .timing-value.null-val  { color: var(--amber); font-size: 0.9rem; }
+
+  .timing-unit {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    margin-left: 3px;
+  }
+
+  /* Status badge */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 1px;
+    border: 1px solid;
+    margin-bottom: 12px;
+  }
+
+  .status-badge.normal   { color: var(--green);  border-color: var(--green);  background: rgba(0,255,136,0.08); }
+  .status-badge.accident { color: var(--red);    border-color: var(--red);    background: rgba(255,59,59,0.08); animation: flash 1s infinite; }
+  .status-badge.peak     { color: var(--amber);  border-color: var(--amber);  background: rgba(255,170,0,0.08); }
+
+  @keyframes flash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  /* LLM explanation */
+  .explanation-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    padding: 14px 16px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text);
+    min-height: 60px;
+  }
+
+  .explanation-box.loading {
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+  }
+
+  /* Typing animation */
+  .typing::after {
+    content: '█';
+    animation: blink 0.8s infinite;
+  }
+
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+  /* History table */
+  .history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+  }
+
+  .history-table th {
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    text-transform: uppercase;
+  }
+
+  .history-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(26,48,80,0.4);
+    color: var(--text);
+  }
+
+  .history-table tr:last-child td { border-bottom: none; }
+  .history-table tr:hover td { background: rgba(0,212,255,0.03); }
+
+  .badge-peak   { color: var(--amber); }
+  .badge-normal { color: var(--text-dim); }
+  .badge-acc    { color: var(--red); }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 30px;
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+  }
+
+  /* Loader */
+  .loader {
+    display: none;
+    text-align: center;
+    padding: 10px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent);
+    letter-spacing: 2px;
+  }
+
+  .loader.show { display: block; }
+
+  .spin {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+    margin-right: 8px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .main-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>LLM-TrafficBrain</h1>
+    <p>INTELLIGENT TRAFFIC SIGNAL CONTROL SYSTEM // COM6104</p>
+    <div class="status-bar">
+      <div class="status-item">
+        <div class="status-dot" id="llm-dot"></div>
+        <span>LLM ENGINE</span>
+      </div>
+      <div class="status-item">
+        <div class="status-dot"></div>
+        <span>MCP TOOLS ACTIVE</span>
+      </div>
+      <div class="status-item">
+        <div class="status-dot"></div>
+        <span>MEMORY MODULE</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-grid">
+
+    <!-- LEFT: Input Panel -->
+    <div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-icon">⚙</span>
+          <h3>Intersection Parameters</h3>
+        </div>
+        <div class="panel-body">
+
+          <!-- Main roads -->
+          <div class="form-group">
+            <label>Main Road Direction(s)</label>
+            <div class="dir-group">
+              <button class="dir-btn" data-dir="N" onclick="toggleDir(this)">N ↑</button>
+              <button class="dir-btn" data-dir="S" onclick="toggleDir(this)">S ↓</button>
+              <button class="dir-btn" data-dir="E" onclick="toggleDir(this)">E →</button>
+              <button class="dir-btn" data-dir="W" onclick="toggleDir(this)">W ←</button>
+            </div>
+          </div>
+
+          <!-- Queue lengths -->
+          <div class="form-group">
+            <label>Vehicle Queue Lengths</label>
+            <div class="queue-grid">
+              <div class="queue-item">
+                <label>↑ NORTH</label>
+                <input type="number" id="q-N" min="0" value="0" placeholder="0">
+              </div>
+              <div class="queue-item">
+                <label>↓ SOUTH</label>
+                <input type="number" id="q-S" min="0" value="0" placeholder="0">
+              </div>
+              <div class="queue-item">
+                <label>→ EAST</label>
+                <input type="number" id="q-E" min="0" value="0" placeholder="0">
+              </div>
+              <div class="queue-item">
+                <label>← WEST</label>
+                <input type="number" id="q-W" min="0" value="0" placeholder="0">
+              </div>
+            </div>
+          </div>
+
+          <!-- Time -->
+          <div class="form-group">
+            <label>Current Time</label>
+            <input type="text" id="time-input" placeholder="e.g. 8:30 AM or 20:30" value="">
+          </div>
+
+          <!-- Accident -->
+          <div class="form-group">
+            <label>Accident / Incident</label>
+            <div class="accident-toggle">
+              <button class="toggle-btn active-no" id="acc-no"  onclick="setAccident(false)">✓ NONE</button>
+              <button class="toggle-btn"            id="acc-yes" onclick="setAccident(true)">⚠ ACCIDENT</button>
+            </div>
+            <div class="accident-dir" id="acc-dir-panel">
+              <label style="margin-bottom:8px;">Accident Direction</label>
+              <div class="acc-dir-grid">
+                <button class="acc-btn" data-acc="N" onclick="selectAccDir(this)">N</button>
+                <button class="acc-btn" data-acc="S" onclick="selectAccDir(this)">S</button>
+                <button class="acc-btn" data-acc="E" onclick="selectAccDir(this)">E</button>
+                <button class="acc-btn" data-acc="W" onclick="selectAccDir(this)">W</button>
+                <button class="acc-btn" data-acc="C" onclick="selectAccDir(this)">C</button>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn-calc" id="calc-btn" onclick="calculate()">
+            ▶ CALCULATE SIGNAL TIMING
+          </button>
+          <button class="btn-restore" id="restore-btn" onclick="restoreNormal()">
+            ⚡ ESC — RESTORE NORMAL (POLICE OVERRIDE)
+          </button>
+
+          <div class="loader" id="loader">
+            <span class="spin">◌</span> LLM ANALYSING...
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Visualization + Results -->
+    <div class="right-col">
+
+      <!-- Intersection Viz -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-icon">🚦</span>
+          <h3>Intersection View</h3>
+        </div>
+        <div class="intersection-viz">
+          <div class="intersection" id="intersection">
+
+            <div class="road-ns"></div>
+            <div class="road-ew"></div>
+            <div class="centre-box"><span class="centre-icon">✕</span></div>
+
+            <!-- Traffic lights -->
+            <div class="tl-post north">
+              <div class="tl-label">N</div>
+              <div class="tl-box">
+                <div class="bulb" id="tl-N-red"></div>
+                <div class="bulb" id="tl-N-amber"></div>
+                <div class="bulb" id="tl-N-green"></div>
+              </div>
+            </div>
+            <div class="tl-post south">
+              <div class="tl-box">
+                <div class="bulb" id="tl-S-green"></div>
+                <div class="bulb" id="tl-S-amber"></div>
+                <div class="bulb" id="tl-S-red"></div>
+              </div>
+              <div class="tl-label">S</div>
+            </div>
+            <div class="tl-post east">
+              <div class="tl-label">E</div>
+              <div class="tl-box">
+                <div class="bulb" id="tl-E-red"></div>
+                <div class="bulb" id="tl-E-amber"></div>
+                <div class="bulb" id="tl-E-green"></div>
+              </div>
+            </div>
+            <div class="tl-post west">
+              <div class="tl-label">W</div>
+              <div class="tl-box">
+                <div class="bulb" id="tl-W-red"></div>
+                <div class="bulb" id="tl-W-amber"></div>
+                <div class="bulb" id="tl-W-green"></div>
+              </div>
+            </div>
+
+            <!-- Queue indicators -->
+            <div class="queue-indicator north">
+              <div class="queue-count" id="qi-N">–</div>
+              <div class="queue-dir-label">NORTH</div>
+            </div>
+            <div class="queue-indicator south">
+              <div class="queue-count" id="qi-S">–</div>
+              <div class="queue-dir-label">SOUTH</div>
+            </div>
+            <div class="queue-indicator east">
+              <div class="queue-count" id="qi-E">–</div>
+              <div class="queue-dir-label">EAST</div>
+            </div>
+            <div class="queue-indicator west">
+              <div class="queue-count" id="qi-W">–</div>
+              <div class="queue-dir-label">WEST</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Signal Timing Results -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-icon">📊</span>
+          <h3>Signal Timing Output</h3>
+        </div>
+        <div class="panel-body">
+
+          <div id="status-area" style="margin-bottom:12px;"></div>
+
+          <div class="results-grid" id="results-grid">
+            <!-- N-S Card -->
+            <div class="result-card" id="card-ns">
+              <div class="result-card-title">N → S  AXIS</div>
+              <div class="timing-row">
+                <div class="timing-label">
+                  <div class="timing-dot green"></div> GREEN
+                </div>
+                <div>
+                  <span class="timing-value green-val" id="ns-green">–</span>
+                  <span class="timing-unit" id="ns-green-unit">s</span>
+                </div>
+              </div>
+              <div class="timing-row">
+                <div class="timing-label">
+                  <div class="timing-dot red"></div> RED
+                </div>
+                <div>
+                  <span class="timing-value red-val" id="ns-red">–</span>
+                  <span class="timing-unit">s</span>
+                </div>
+              </div>
+            </div>
+            <!-- E-W Card -->
+            <div class="result-card" id="card-ew">
+              <div class="result-card-title">E → W  AXIS</div>
+              <div class="timing-row">
+                <div class="timing-label">
+                  <div class="timing-dot green"></div> GREEN
+                </div>
+                <div>
+                  <span class="timing-value green-val" id="ew-green">–</span>
+                  <span class="timing-unit" id="ew-green-unit">s</span>
+                </div>
+              </div>
+              <div class="timing-row">
+                <div class="timing-label">
+                  <div class="timing-dot red"></div> RED
+                </div>
+                <div>
+                  <span class="timing-value red-val" id="ew-red">–</span>
+                  <span class="timing-unit">s</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- LLM Explanation -->
+          <div class="panel-header" style="margin: 0 -20px 12px; padding: 8px 20px;">
+            <span class="panel-icon">🤖</span>
+            <h3>LLM Reasoning</h3>
+          </div>
+          <div class="explanation-box" id="explanation">
+            Awaiting input — submit intersection parameters to activate LLM analysis.
+          </div>
+
+        </div>
+      </div>
+
+      <!-- History -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-icon">🕐</span>
+          <h3>Session History</h3>
+        </div>
+        <div class="panel-body" style="padding: 0;">
+          <div id="history-container">
+            <div class="empty-state">NO HISTORY YET</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── State ─────────────────────────────────────────────────────────────
+  let selectedDirs = [];
+  let accidentActive = false;
+  let selectedAccDir = 'none';
+
+  // ── Set current time as default ───────────────────────────────────────
+  (function() {
+    const now = new Date();
+    let h = now.getHours(), m = now.getMinutes();
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    document.getElementById('time-input').value = `${h}:${String(m).padStart(2,'0')} ${ampm}`;
+  })();
+
+  // ── Direction toggle ──────────────────────────────────────────────────
+  function toggleDir(btn) {
+    const dir = btn.dataset.dir;
+    if (btn.classList.contains('active')) {
+      btn.classList.remove('active');
+      selectedDirs = selectedDirs.filter(d => d !== dir);
+    } else {
+      btn.classList.add('active');
+      selectedDirs.push(dir);
+    }
+  }
+
+  // ── Accident toggle ───────────────────────────────────────────────────
+  function setAccident(val) {
+    accidentActive = val;
+    document.getElementById('acc-no').className  = 'toggle-btn' + (val ? '' : ' active-no');
+    document.getElementById('acc-yes').className = 'toggle-btn' + (val ? ' active-yes' : '');
+    document.getElementById('acc-dir-panel').className = 'accident-dir' + (val ? ' show' : '');
+    if (!val) selectedAccDir = 'none';
+  }
+
+  function selectAccDir(btn) {
+    document.querySelectorAll('.acc-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedAccDir = btn.dataset.acc;
+  }
+
+  // ── Traffic light control ─────────────────────────────────────────────
+  function setLight(dir, color) {
+    ['red','amber','green'].forEach(c => {
+      const el = document.getElementById(`tl-${dir}-${c}`);
+      if (el) el.className = 'bulb' + (c === color ? ` ${c}-on` : '');
+    });
+  }
+
+  function updateLights(signal) {
+    const ns = signal.ns, ew = signal.ew;
+    const accMode = signal.accident_mode;
+
+    if (accMode === 'center') {
+      ['N','S','E','W'].forEach(d => setLight(d, 'red'));
+      return;
+    }
+
+    // N-S
+    const nsColor = ns.green === 'NULL' ? 'red' : 'green';
+    setLight('N', nsColor);
+    setLight('S', nsColor);
+    // E-W
+    const ewColor = ew.green === 'NULL' ? 'red' : (nsColor === 'green' ? 'red' : 'green');
+    setLight('E', ewColor);
+    setLight('W', ewColor);
+  }
+
+  // ── Queue indicators ──────────────────────────────────────────────────
+  function updateQueues(queues) {
+    ['N','S','E','W'].forEach(d => {
+      const el = document.getElementById(`qi-${d}`);
+      if (el) el.textContent = queues[d] !== undefined ? queues[d] : '–';
+    });
+  }
+
+  // ── Results display ───────────────────────────────────────────────────
+  function displayResults(signal, explanation) {
+    // Status badge
+    const statusArea = document.getElementById('status-area');
+    let badgeClass = 'normal', badgeText = '● NORMAL OPERATION';
+    if (signal.accident_mode) {
+      badgeClass = 'accident';
+      badgeText = '⚠ ACCIDENT MODE — ' + (signal.accident_mode === 'center' ? 'CENTRE BLOCKAGE' : signal.accident_mode.toUpperCase() + ' ROAD');
+    } else if (signal.is_peak) {
+      badgeClass = 'peak';
+      badgeText = '◆ PEAK HOUR ACTIVE';
+    }
+    statusArea.innerHTML = `<div class="status-badge ${badgeClass}">${badgeText}</div>`;
+
+    // N-S timing
+    const nsG = signal.ns.green;
+    document.getElementById('ns-green').textContent = nsG === 'NULL' ? 'NULL' : nsG;
+    document.getElementById('ns-green').className = 'timing-value ' + (nsG === 'NULL' ? 'null-val' : 'green-val');
+    document.getElementById('ns-green-unit').textContent = nsG === 'NULL' ? '' : 's';
+    document.getElementById('ns-red').textContent = signal.ns.red;
+
+    // E-W timing
+    const ewG = signal.ew.green;
+    document.getElementById('ew-green').textContent = ewG === 'NULL' ? 'NULL' : ewG;
+    document.getElementById('ew-green').className = 'timing-value ' + (ewG === 'NULL' ? 'null-val' : 'green-val');
+    document.getElementById('ew-green-unit').textContent = ewG === 'NULL' ? '' : 's';
+    document.getElementById('ew-red').textContent = signal.ew.red;
+
+    // Highlight active card
+    document.getElementById('card-ns').classList.toggle('active-card', true);
+    document.getElementById('card-ew').classList.toggle('active-card', true);
+
+    // Explanation
+    const exBox = document.getElementById('explanation');
+    exBox.classList.remove('loading');
+    exBox.textContent = explanation || signal.note || 'Signal timing calculated successfully.';
+
+    // Lights
+    updateLights(signal);
+
+    // Restore button
+    document.getElementById('restore-btn').className = 'btn-restore' + (signal.accident_mode ? ' show' : '');
+  }
+
+  // ── History ───────────────────────────────────────────────────────────
+  function updateHistory(history) {
+    const container = document.getElementById('history-container');
+    if (!history || history.length === 0) {
+      container.innerHTML = '<div class="empty-state">NO HISTORY YET</div>';
+      return;
+    }
+    const rows = [...history].reverse().map(s => {
+      const r = s.result;
+      const peak = r.is_peak ? '<span class="badge-peak">PEAK</span>' : '<span class="badge-normal">OFF-PEAK</span>';
+      const acc = r.accident_mode ? `<span class="badge-acc">⚠${r.accident_mode}</span>` : '—';
+      const nsG = r.ns.green === 'NULL' ? 'NULL' : r.ns.green + 's';
+      const ewG = r.ew.green === 'NULL' ? 'NULL' : r.ew.green + 's';
+      return `<tr>
+        <td>${s.time}</td>
+        <td>${peak}</td>
+        <td>G:${nsG} R:${r.ns.red}s</td>
+        <td>G:${ewG} R:${r.ew.red}s</td>
+        <td>${acc}</td>
+      </tr>`;
+    }).join('');
+
+    container.innerHTML = `<table class="history-table">
+      <thead><tr>
+        <th>Time</th><th>Period</th><th>N→S</th><th>E→W</th><th>Event</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+
+  // ── Calculate ─────────────────────────────────────────────────────────
+  async function calculate() {
+    if (selectedDirs.length === 0) {
+      alert('Please select at least one main road direction.');
+      return;
+    }
+
+    const queues = {
+      N: parseInt(document.getElementById('q-N').value) || 0,
+      S: parseInt(document.getElementById('q-S').value) || 0,
+      E: parseInt(document.getElementById('q-E').value) || 0,
+      W: parseInt(document.getElementById('q-W').value) || 0,
+    };
+    const timeStr = document.getElementById('time-input').value.trim();
+    if (!timeStr) { alert('Please enter a time.'); return; }
+
+    const acc = accidentActive ? selectedAccDir : 'none';
+    if (accidentActive && acc === 'none') {
+      alert('Please select the accident direction (N / S / E / W / C).'); return;
+    }
+
+    // Update queue display immediately
+    updateQueues(queues);
+
+    // Show loader
+    document.getElementById('calc-btn').disabled = true;
+    document.getElementById('loader').classList.add('show');
+    document.getElementById('explanation').textContent = 'Analysing...';
+    document.getElementById('explanation').classList.add('loading');
+
+    try {
+      const resp = await fetch('/api/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          main_roads: selectedDirs,
+          queues,
+          time: timeStr,
+          accident: acc,
+        }),
+      });
+      const data = await resp.json();
+      displayResults(data.signal, data.explanation);
+      updateHistory(data.history);
+    } catch (err) {
+      document.getElementById('explanation').textContent = 'Error: ' + err.message;
+    } finally {
+      document.getElementById('calc-btn').disabled = false;
+      document.getElementById('loader').classList.remove('show');
+    }
+  }
+
+  // ── Restore Normal ────────────────────────────────────────────────────
+  async function restoreNormal() {
+    document.getElementById('loader').classList.add('show');
+    try {
+      const resp = await fetch('/api/restore', { method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}' });
+      const data = await resp.json();
+      if (data.signal) {
+        displayResults(data.signal, data.explanation);
+        setAccident(false);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      document.getElementById('loader').classList.remove('show');
+    }
+  }
+
+  // ── Enter key submits ─────────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') calculate();
+  });
+</script>
+</body>
+</html>
